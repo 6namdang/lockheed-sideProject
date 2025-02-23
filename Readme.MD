@@ -21,8 +21,13 @@ Interview Grader is a full-stack application for real-time facial emotion recogn
 ## Implementation
 This project enables real-time emotion recognition through a full-stack pipeline.
 
-### Setup
+### Conda
+Make sure that you have conda install in your machine. You can install it with conda or miniconda (both works fine). After that,
+add the conda into your environment. If you don't know how to create conda environment, call me.
+
 ```sh
+conda create --name env python==3.9
+cd interview-grader
 cd server
 pip install -r requirements.txt
 ```
@@ -34,6 +39,7 @@ uvicorn main:app --reload
 ```
 
 ### Start the React Server
+Create another terminal
 ```sh
 cd emotion-recognition
 npm install
