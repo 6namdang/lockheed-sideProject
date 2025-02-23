@@ -1,18 +1,9 @@
 # Realtime Facial Emotion Recognition
-<img align="center" alt="architecture" src="./Resources/HLD.png"/><br>
 
 # Introduction
 This repository demonstrates an end-to-end pipeline for real-time Facial emotion recognition application through full-stack development.
 The frontend is developed in react.js and the backend is developed in FastAPI. The emotion prediction model is built with Tensorflow Keras, and for real-time face detection with animation on the frontend, Tensorflow.js have been used.
 
-# Demo video
-Below is a demo video of the application that I have built.
-
-![Demo GIF](./Resources/emotion-recognition.gif)
-
-High quality youtube video available at - https://youtu.be/aTe05n6T5Vo
-
-[![demo video](./Resources/HLD.png)](https://youtu.be/aTe05n6T5Vo)
 
 # Technologies used
 1. ReactJS.<img align="left" alt="react" width="26px" src="./Resources/react.png" /><br>
@@ -47,6 +38,7 @@ $ uvicorn main:app --reload
 ## Starting the React deployment server
 ```sh
 $ cd emotion-recognition
+$ npm i
 $ npm start
 ```
 
@@ -68,6 +60,6 @@ The bounding box around the face is detected using a TensorflowJS model.
 4. TensorflowJS used for face detection on the front-end gives scope to a more interactive interface.
 
 # Scopes of Improvement
-1. Custom light and efficient ML model with higher accuracy could provide us with better results.
-2. There is a lag between the instant frame and ml model prediction, this issue could be solved by running it over a system with better computing power. My project ran on a system with 4GM RAM.
-3. Making a disgusted face in the demo video was a difficult task for me, so the Disgusted emotion bar barely spiked any time. The reason could also be that the model was not trained with enough examples from the "disgust" class compared to other classes.
+1. Body movement detection system
+2. Dockerize
+3. Add database
