@@ -1,0 +1,4 @@
+emotion-recognition/node_modules
+emotion-recognition/.gitignore
+server/server
+server/__pycache__
