@@ -10,6 +10,7 @@ import { Camera } from "@mediapipe/camera_utils/camera_utils.js";
 function App() {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
+  const socketRef = useRef(null);
   const blazeface = require("@tensorflow-models/blazeface");
   const [alert, setAlert] = useState("");
   const pose = useRef(null);
@@ -86,41 +87,27 @@ function App() {
     }
   };
 
-  // Everything below remains EXACTLY AS ORIGINAL
-  const runFaceDetectorModel = async () => {
-    const model = await blazeface.load();
-    console.log("FaceDetection Model is Loaded..");
-    setInterval(() => {
-      detect(model);
-    }, 100);
-  };
-
-  const detect = async (net) => {
-    if (
-      typeof webcamRef.current !== "undefined" &&
-      webcamRef.current !== null &&
-      webcamRef.current.video.readyState === 4
-    ) {
-      const video = webcamRef.current.video;
-      const videoWidth = webcamRef.current.video.videoWidth;
-      const videoHeight = webcamRef.current.video.videoHeight;
-
-      webcamRef.current.video.width = videoWidth;
-      webcamRef.current.video.height = videoHeight;
-      canvasRef.current.width = videoWidth;
-      canvasRef.current.height = videoHeight;
-
-      const face = await net.estimateFaces(video);
+  // Add WebSocket connection setup
+  useEffect(() => {
+    const setupWebSocket = () => {
       const backendUrl = process.env.REACT_APP_BACKEND_URL || "ws://localhost:8000";
-      var socket = new WebSocket(backendUrl);
-      var imageSrc = webcamRef.current.getScreenshot();
-      var apiCall = {
-        event: "localhost:subscribe",
-        data: { image: imageSrc },
+      socketRef.current = new WebSocket(backendUrl);
+
+      socketRef.current.onopen = () => {
+        console.log('WebSocket Connected');
       };
 
-      socket.onopen = () => socket.send(JSON.stringify(apiCall));
-      socket.onmessage = function (event) {
+      socketRef.current.onerror = (error) => {
+        console.error('WebSocket Error:', error);
+      };
+
+      socketRef.current.onclose = () => {
+        console.log('WebSocket Closed');
+        // Attempt to reconnect after 5 seconds
+        setTimeout(setupWebSocket, 5000);
+      };
+
+      socketRef.current.onmessage = function (event) {
         var pred_log = JSON.parse(event.data);
         document.getElementById("Angry").value = Math.round(
           pred_log["predictions"]["angry"] * 100
@@ -145,12 +132,61 @@ function App() {
         );
         document.getElementById("emotion_text").value = pred_log["emotion"];
 
-        const ctx = canvasRef.current.getContext("2d");
-        requestAnimationFrame(() => {
-          drawMesh(face, pred_log, ctx);
-        });
+        const ctx = canvasRef.current?.getContext("2d");
+        if (ctx) {
+          requestAnimationFrame(() => {
+            drawMesh(face, pred_log, ctx);
+          });
+        }
       };
+    };
+
+    setupWebSocket();
+
+    // Cleanup on unmount
+    return () => {
+      if (socketRef.current) {
+        socketRef.current.close();
+      }
+    };
+  }, []); // Empty dependency array means this runs once on mount
+
+  const detect = async (net) => {
+    if (
+      typeof webcamRef.current !== "undefined" &&
+      webcamRef.current !== null &&
+      webcamRef.current.video.readyState === 4
+    ) {
+      const video = webcamRef.current.video;
+      const videoWidth = webcamRef.current.video.videoWidth;
+      const videoHeight = webcamRef.current.video.videoHeight;
+
+      webcamRef.current.video.width = videoWidth;
+      webcamRef.current.video.height = videoHeight;
+      canvasRef.current.width = videoWidth;
+      canvasRef.current.height = videoHeight;
+
+      const face = await net.estimateFaces(video);
+      
+      // Only send data if WebSocket is connected
+      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+        var imageSrc = webcamRef.current.getScreenshot();
+        var apiCall = {
+          event: "localhost:subscribe",
+          data: { image: imageSrc },
+        };
+        socketRef.current.send(JSON.stringify(apiCall));
+      }
     }
+  };
+
+  // Everything below remains EXACTLY AS ORIGINAL
+  const runFaceDetectorModel = async () => {
+    const model = await blazeface.load();
+    console.log("FaceDetection Model is Loaded..");
+    setInterval(() => {
+      detect(model);
+    }, 100);
   };
 
   useEffect(() => {
