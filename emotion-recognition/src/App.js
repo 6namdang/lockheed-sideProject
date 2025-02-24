@@ -91,54 +91,77 @@ function App() {
   useEffect(() => {
     const setupWebSocket = () => {
       const backendUrl = process.env.REACT_APP_BACKEND_URL || "ws://localhost:8000";
-      socketRef.current = new WebSocket(backendUrl);
+      console.log('Connecting to WebSocket:', backendUrl); // Debug log
 
-      socketRef.current.onopen = () => {
-        console.log('WebSocket Connected');
-      };
+      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
+        console.log('Closing existing connection');
+        socketRef.current.close();
+      }
 
-      socketRef.current.onerror = (error) => {
-        console.error('WebSocket Error:', error);
-      };
+      try {
+        socketRef.current = new WebSocket(backendUrl);
 
-      socketRef.current.onclose = () => {
-        console.log('WebSocket Closed');
-        // Attempt to reconnect after 5 seconds
-        setTimeout(setupWebSocket, 5000);
-      };
+        socketRef.current.onopen = () => {
+          console.log('WebSocket Connected Successfully');
+        };
 
-      socketRef.current.onmessage = function (event) {
-        var pred_log = JSON.parse(event.data);
-        document.getElementById("Angry").value = Math.round(
-          pred_log["predictions"]["angry"] * 100
-        );
-        document.getElementById("Neutral").value = Math.round(
-          pred_log["predictions"]["neutral"] * 100
-        );
-        document.getElementById("Happy").value = Math.round(
-          pred_log["predictions"]["happy"] * 100
-        );
-        document.getElementById("Fear").value = Math.round(
-          pred_log["predictions"]["fear"] * 100
-        );
-        document.getElementById("Surprise").value = Math.round(
-          pred_log["predictions"]["surprise"] * 100
-        );
-        document.getElementById("Sad").value = Math.round(
-          pred_log["predictions"]["sad"] * 100
-        );
-        document.getElementById("Disgust").value = Math.round(
-          pred_log["predictions"]["disgust"] * 100
-        );
-        document.getElementById("emotion_text").value = pred_log["emotion"];
+        socketRef.current.onerror = (error) => {
+          console.error('WebSocket Error:', error);
+        };
 
-        const ctx = canvasRef.current?.getContext("2d");
-        if (ctx) {
-          requestAnimationFrame(() => {
-            drawMesh(face, pred_log, ctx);
-          });
-        }
-      };
+        socketRef.current.onclose = (event) => {
+          console.log('WebSocket Closed:', event.code, event.reason);
+          // Attempt to reconnect after 5 seconds
+          setTimeout(setupWebSocket, 5000);
+        };
+
+        socketRef.current.onmessage = function (event) {
+          try {
+            var pred_log = JSON.parse(event.data);
+            
+            // Check if there's an error message
+            if (pred_log.error) {
+              console.warn('Backend Error:', pred_log.error);
+              return;
+            }
+
+            // Update emotion values
+            document.getElementById("Angry").value = Math.round(
+              pred_log.predictions.angry * 100
+            );
+            document.getElementById("Neutral").value = Math.round(
+              pred_log.predictions.neutral * 100
+            );
+            document.getElementById("Happy").value = Math.round(
+              pred_log.predictions.happy * 100
+            );
+            document.getElementById("Fear").value = Math.round(
+              pred_log.predictions.fear * 100
+            );
+            document.getElementById("Surprise").value = Math.round(
+              pred_log.predictions.surprise * 100
+            );
+            document.getElementById("Sad").value = Math.round(
+              pred_log.predictions.sad * 100
+            );
+            document.getElementById("Disgust").value = Math.round(
+              pred_log.predictions.disgust * 100
+            );
+            document.getElementById("emotion_text").value = pred_log.emotion;
+
+            const ctx = canvasRef.current?.getContext("2d");
+            if (ctx) {
+              requestAnimationFrame(() => {
+                drawMesh(face, pred_log, ctx);
+              });
+            }
+          } catch (error) {
+            console.error('Error processing message:', error);
+          }
+        };
+      } catch (error) {
+        console.error('Error setting up WebSocket:', error);
+      }
     };
 
     setupWebSocket();
