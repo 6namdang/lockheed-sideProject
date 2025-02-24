@@ -111,7 +111,8 @@ function App() {
       canvasRef.current.height = videoHeight;
 
       const face = await net.estimateFaces(video);
-      var socket = new WebSocket("ws://localhost:8000");
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || "ws://localhost:8000";
+      var socket = new WebSocket(backendUrl);
       var imageSrc = webcamRef.current.getScreenshot();
       var apiCall = {
         event: "localhost:subscribe",
