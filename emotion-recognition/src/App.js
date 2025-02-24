@@ -10,8 +10,6 @@ import { Camera } from "@mediapipe/camera_utils/camera_utils.js";
 function App() {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
-  const socketRef = useRef(null);
-  const faceRef = useRef(null);
   const blazeface = require("@tensorflow-models/blazeface");
   const [alert, setAlert] = useState("");
   const pose = useRef(null);
@@ -88,92 +86,14 @@ function App() {
     }
   };
 
-  // Add WebSocket connection setup
-  useEffect(() => {
-    const setupWebSocket = () => {
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || "ws://localhost:8000/ws";
-      console.log('Connecting to WebSocket:', backendUrl);
-
-      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-        console.log('Closing existing connection');
-        socketRef.current.close();
-      }
-
-      try {
-        socketRef.current = new WebSocket(backendUrl);
-
-        socketRef.current.onopen = () => {
-          console.log('WebSocket Connected Successfully');
-        };
-
-        socketRef.current.onerror = (error) => {
-          console.error('WebSocket Error:', error);
-        };
-
-        socketRef.current.onclose = (event) => {
-          console.log('WebSocket Closed:', event.code, event.reason);
-          // Attempt to reconnect after 5 seconds
-          setTimeout(setupWebSocket, 5000);
-        };
-
-        socketRef.current.onmessage = function (event) {
-          try {
-            var pred_log = JSON.parse(event.data);
-            
-            // Check if there's an error message
-            if (pred_log.error) {
-              console.warn('Backend Error:', pred_log.error);
-              return;
-            }
-
-            // Update emotion values
-            document.getElementById("Angry").value = Math.round(
-              pred_log.predictions.angry * 100
-            );
-            document.getElementById("Neutral").value = Math.round(
-              pred_log.predictions.neutral * 100
-            );
-            document.getElementById("Happy").value = Math.round(
-              pred_log.predictions.happy * 100
-            );
-            document.getElementById("Fear").value = Math.round(
-              pred_log.predictions.fear * 100
-            );
-            document.getElementById("Surprise").value = Math.round(
-              pred_log.predictions.surprise * 100
-            );
-            document.getElementById("Sad").value = Math.round(
-              pred_log.predictions.sad * 100
-            );
-            document.getElementById("Disgust").value = Math.round(
-              pred_log.predictions.disgust * 100
-            );
-            document.getElementById("emotion_text").value = pred_log.emotion;
-
-            const ctx = canvasRef.current?.getContext("2d");
-            if (ctx && faceRef.current) {
-              requestAnimationFrame(() => {
-                drawMesh(faceRef.current, pred_log, ctx);
-              });
-            }
-          } catch (error) {
-            console.error('Error processing message:', error);
-          }
-        };
-      } catch (error) {
-        console.error('Error setting up WebSocket:', error);
-      }
-    };
-
-    setupWebSocket();
-
-    // Cleanup on unmount
-    return () => {
-      if (socketRef.current) {
-        socketRef.current.close();
-      }
-    };
-  }, []); // Empty dependency array means this runs once on mount
+  // Everything below remains EXACTLY AS ORIGINAL
+  const runFaceDetectorModel = async () => {
+    const model = await blazeface.load();
+    console.log("FaceDetection Model is Loaded..");
+    setInterval(() => {
+      detect(model);
+    }, 100);
+  };
 
   const detect = async (net) => {
     if (
@@ -191,27 +111,46 @@ function App() {
       canvasRef.current.height = videoHeight;
 
       const face = await net.estimateFaces(video);
-      faceRef.current = face; // Store the face detection result
-      
-      // Only send data if WebSocket is connected
-      if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
-        var imageSrc = webcamRef.current.getScreenshot();
-        var apiCall = {
-          event: "localhost:subscribe",
-          data: { image: imageSrc },
-        };
-        socketRef.current.send(JSON.stringify(apiCall));
-      }
-    }
-  };
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || "ws://localhost:8000";
+      var socket = new WebSocket(backendUrl);
+      var imageSrc = webcamRef.current.getScreenshot();
+      var apiCall = {
+        event: "localhost:subscribe",
+        data: { image: imageSrc },
+      };
 
-  // Everything below remains EXACTLY AS ORIGINAL
-  const runFaceDetectorModel = async () => {
-    const model = await blazeface.load();
-    console.log("FaceDetection Model is Loaded..");
-    setInterval(() => {
-      detect(model);
-    }, 100);
+      socket.onopen = () => socket.send(JSON.stringify(apiCall));
+      socket.onmessage = function (event) {
+        var pred_log = JSON.parse(event.data);
+        document.getElementById("Angry").value = Math.round(
+          pred_log["predictions"]["angry"] * 100
+        );
+        document.getElementById("Neutral").value = Math.round(
+          pred_log["predictions"]["neutral"] * 100
+        );
+        document.getElementById("Happy").value = Math.round(
+          pred_log["predictions"]["happy"] * 100
+        );
+        document.getElementById("Fear").value = Math.round(
+          pred_log["predictions"]["fear"] * 100
+        );
+        document.getElementById("Surprise").value = Math.round(
+          pred_log["predictions"]["surprise"] * 100
+        );
+        document.getElementById("Sad").value = Math.round(
+          pred_log["predictions"]["sad"] * 100
+        );
+        document.getElementById("Disgust").value = Math.round(
+          pred_log["predictions"]["disgust"] * 100
+        );
+        document.getElementById("emotion_text").value = pred_log["emotion"];
+
+        const ctx = canvasRef.current.getContext("2d");
+        requestAnimationFrame(() => {
+          drawMesh(face, pred_log, ctx);
+        });
+      };
+    }
   };
 
   useEffect(() => {
