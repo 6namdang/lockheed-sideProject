@@ -11,6 +11,7 @@ function App() {
   const webcamRef = useRef(null);
   const canvasRef = useRef(null);
   const socketRef = useRef(null);
+  const faceRef = useRef(null);
   const blazeface = require("@tensorflow-models/blazeface");
   const [alert, setAlert] = useState("");
   const pose = useRef(null);
@@ -90,8 +91,8 @@ function App() {
   // Add WebSocket connection setup
   useEffect(() => {
     const setupWebSocket = () => {
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || "ws://localhost:8000";
-      console.log('Connecting to WebSocket:', backendUrl); // Debug log
+      const backendUrl = process.env.REACT_APP_BACKEND_URL || "ws://localhost:8000/ws";
+      console.log('Connecting to WebSocket:', backendUrl);
 
       if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
         console.log('Closing existing connection');
@@ -150,9 +151,9 @@ function App() {
             document.getElementById("emotion_text").value = pred_log.emotion;
 
             const ctx = canvasRef.current?.getContext("2d");
-            if (ctx) {
+            if (ctx && faceRef.current) {
               requestAnimationFrame(() => {
-                drawMesh(face, pred_log, ctx);
+                drawMesh(faceRef.current, pred_log, ctx);
               });
             }
           } catch (error) {
@@ -190,6 +191,7 @@ function App() {
       canvasRef.current.height = videoHeight;
 
       const face = await net.estimateFaces(video);
+      faceRef.current = face; // Store the face detection result
       
       // Only send data if WebSocket is connected
       if (socketRef.current && socketRef.current.readyState === WebSocket.OPEN) {
