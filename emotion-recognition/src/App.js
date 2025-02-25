@@ -1,6 +1,7 @@
 import React, { useRef, useEffect, useState } from "react";
 import "./App.css";
 import logo from "./logo.svg";
+
 import * as tf from "@tensorflow/tfjs";
 import Webcam from "react-webcam";
 import { drawMesh } from "./utilities";
@@ -95,28 +96,38 @@ function App() {
     }, 100);
   };
 
+
   const detect = async (net) => {
     if (
       typeof webcamRef.current !== "undefined" &&
       webcamRef.current !== null &&
       webcamRef.current.video.readyState === 4
     ) {
+
       const video = webcamRef.current.video;
       const videoWidth = webcamRef.current.video.videoWidth;
       const videoHeight = webcamRef.current.video.videoHeight;
 
+
       webcamRef.current.video.width = videoWidth;
       webcamRef.current.video.height = videoHeight;
+
+
       canvasRef.current.width = videoWidth;
       canvasRef.current.height = videoHeight;
 
+
       const face = await net.estimateFaces(video);
-      const backendUrl = process.env.REACT_APP_BACKEND_URL || "ws://localhost:8000";
-      var socket = new WebSocket(backendUrl);
+      var socket = new WebSocket("ws://localhost:8000");
       var imageSrc = webcamRef.current.getScreenshot();
+
+
+
       var apiCall = {
         event: "localhost:subscribe",
         data: { image: imageSrc },
+
+
       };
 
       socket.onopen = () => socket.send(JSON.stringify(apiCall));
@@ -169,6 +180,9 @@ function App() {
             fontSize: "24px",
             fontWeight: "bold",
             zIndex: 1000,
+
+
+
           }}
         >
           {alert}
@@ -220,6 +234,9 @@ function App() {
             right: 0,
             width: 150,
             height: 150,
+
+
+
           }}
         />
         <div
